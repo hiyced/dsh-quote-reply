@@ -1,0 +1,9 @@
+# Both bundles use the chat text-selection slot.
+- id: message-quotes
+  name: '@deepseek-ai/dsh-message-quotes'
+  disabled: true
+
+- insert:
+    - id: quote-reply
+      name: '@local/dsh-quote-reply'
+      config: {}

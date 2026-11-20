@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "引用气泡回复",
+    "description": "划选对话文字，在气泡里回复。可引用多段原文，添加到聊天框后逐条删除。",
+    "detail": "docs/DETAIL.md"
+  }
+}
