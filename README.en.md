@@ -2,9 +2,9 @@
 
 [简体中文](README.md)
 
-**Select text and reply right beside it.** Quote several passages in one reply, then add it to your chat draft as a removable chip.
+**Select text and reply right beside it.** Add several quote replies to your chat draft, each as its own removable chip.
 
-![Demo: select text, write a reply in the popover, add another passage, and turn it into a draft chip](docs/images/quote-reply-demo.gif)
+![Demo: write two separate quote replies, add them to the draft, and remove one chip](docs/images/quote-reply-demo.gif)
 
 ## Features
 
@@ -54,6 +54,6 @@ dsh web
 
 1. Select text in a conversation and click **Quote reply** beside the selection.
 2. Write your reply. Press `Enter` or click the blue up arrow to add it to your draft.
-3. Add more replies as needed. When you're ready, use the composer's send button to send them together.
+3. To write a separate reply, select the next passage and click **Quote reply** to open a fresh popover. Each reply has its own chip, and you can send them together from the composer.
 
 In the popover, press `Shift+Enter` for a new line. Press `Esc`, click **Esc Cancel**, or click outside the popover to close it. **Add to draft** is disabled while the reply is empty.

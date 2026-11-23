@@ -47,17 +47,10 @@ window.__ModuleLoader__.load({
       id: 'quote',
       order: -10,
       match(text, from) {
-        for (const range of messageQuoteRanges(text)) {
-          for (const start of [range.start - 2, range.start, range.end]) {
-            if (start < from) continue
-            if (start === range.start) {
-              return { id: 'quote', start, end: range.end, data: { text: quoteTextOf(text.slice(start, range.end)) } }
-            }
-            if (text.slice(start, start + 2) === '\n\n') {
-              return { id: 'text', start, end: start + 2, data: { text: '\n\n', display: ' ' } }
-            }
-          }
-        }
+        const range = messageQuoteRanges(text).find(({ start }) => start >= from)
+        if (!range) return
+        const { start, end } = range
+        return { id: 'quote', start, end, data: { text: quoteTextOf(text.slice(start, end)) } }
       },
     }
 
@@ -753,7 +746,11 @@ window.__ModuleLoader__.load({
   display: inline-flex;
   box-sizing: border-box;
   max-width: min(100%, 360px);
+  margin-block: 2px;
   vertical-align: middle;
+}
+[data-composer-chip="quote-reply"] + [data-composer-chip="quote-reply"] > .qrp-draft-chip {
+  margin-inline-start: 4px;
 }
 .qrp-draft-origin { max-width: 180px; color: var(--dsw-alias-label-secondary); }
 .qrp-draft-response { padding-inline-start: 5px; border-inline-start: 1px solid var(--dsw-alias-border-l2); }
