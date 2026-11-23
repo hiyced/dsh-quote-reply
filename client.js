@@ -313,7 +313,7 @@ window.__ModuleLoader__.load({
           const viewportHeight = view.document.documentElement.clientHeight
           const leftEdge = Math.max(margin, area.left + margin)
           const rightEdge = Math.min(viewportWidth - margin, area.right - margin)
-          card.style.width = Math.min(424, Math.max(0, rightEdge - leftEdge)) + 'px'
+          card.style.maxWidth = Math.max(0, rightEdge - leftEdge) + 'px'
           const width = card.offsetWidth
           const height = card.offsetHeight
           const below = last.bottom + 8
@@ -349,12 +349,19 @@ window.__ModuleLoader__.load({
       const input = useRef(null)
       const card = useRef(null)
       const composing = useRef(false)
+      const replySelection = useRef(null)
       const { origin, quotes, picking } = panel
 
       usePanelPosition(card, panel)
       useLayoutEffect(() => {
-        if (!picking) input.current?.focus({ preventScroll: true })
-      }, [panel, picking])
+        const textarea = input.current
+        if (!textarea) return
+        textarea.focus({ preventScroll: true })
+        if (replySelection.current) {
+          textarea.setSelectionRange(...replySelection.current)
+          replySelection.current = null
+        }
+      }, [panel])
 
       useEffect(() => {
         const document = origin.ownerDocument
@@ -398,45 +405,57 @@ window.__ModuleLoader__.load({
 
       if (picking) return null
       return h('section', { ref: card, className: 'qrp-card', role: 'dialog', 'aria-label': t('quote.reply') },
-        h('header', { className: 'qrp-card-head' },
-          h(QuoteGlyph), h('strong', null, t('quote.reply')),
-          h('button', { type: 'button', className: 'qrp-text-button qrp-pick', onClick: () => model.chooseMore(true) },
-            h('span', { 'aria-hidden': true }, '+'), ' ', t('quote.more')),
-        ),
         h('div', { className: 'qrp-previews' },
           quotes.map((quote, index) => h(QuotePreview, { key: index, text: quote.text, t })),
         ),
-        h('textarea', {
-          ref: input,
-          className: 'qrp-input',
-          rows: 2,
-          'aria-label': t('reply.placeholder'),
-          placeholder: t('reply.placeholder'),
-          value: reply,
-          onChange: event => { setReply(event.currentTarget.value); setNotice(false) },
-          onCompositionStart: () => { composing.current = true },
-          onCompositionEnd: () => { composing.current = false },
-          onKeyDown(event) {
-            if (event.key !== 'Enter') return
-            event.stopPropagation()
-            if (event.shiftKey || composing.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
-            event.preventDefault()
-            addToDraft()
+        h('button', {
+          type: 'button',
+          className: 'qrp-text-button qrp-pick',
+          onClick() {
+            const { selectionStart, selectionEnd, selectionDirection } = input.current
+            replySelection.current = [selectionStart, selectionEnd, selectionDirection]
+            model.chooseMore(true)
           },
-        }),
+        }, h('span', { 'aria-hidden': true }, '+'), t('quote.more')),
+        h('div', { className: 'qrp-reply-row' },
+          h('textarea', {
+            ref: input,
+            className: 'qrp-input',
+            rows: 1,
+            'aria-label': t('reply.placeholder'),
+            placeholder: t('reply.placeholder'),
+            value: reply,
+            onChange: event => { setReply(event.currentTarget.value); setNotice(false) },
+            onCompositionStart: () => { composing.current = true },
+            onCompositionEnd: () => { composing.current = false },
+            onKeyDown(event) {
+              if (event.key !== 'Enter') return
+              event.stopPropagation()
+              if (event.shiftKey || composing.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
+              event.preventDefault()
+              addToDraft()
+            },
+          }),
+          h('button', {
+            type: 'button',
+            className: 'qrp-add',
+            'aria-label': t('reply.add'),
+            'aria-keyshortcuts': 'Enter',
+            title: t('reply.add'),
+            disabled: !reply.trim(),
+            onClick: addToDraft,
+          }, h('span', { 'aria-hidden': true }, '↑')),
+        ),
         notice && h('div', { className: 'qrp-notice', role: 'alert' }, t('draft.unavailable')),
-        h('footer', { className: 'qrp-card-foot' },
-          h('span', { className: 'qrp-key-hint' }, h('kbd', null, 'Shift'), ' ', h('kbd', null, 'Enter'), ' ', t('reply.newline')),
-          h('div', { className: 'qrp-actions' },
-            h('button', { type: 'button', className: 'qrp-text-button', onClick: () => model.close(origin) }, t('reply.cancel')),
-            h('button', {
-              type: 'button',
-              className: 'qrp-add',
-              'aria-keyshortcuts': 'Enter',
-              disabled: !reply.trim(),
-              onClick: addToDraft,
-            }, t('reply.add'), h('span', { 'aria-hidden': true }, '↵')),
-          ),
+        h('footer', { className: 'qrp-key-hint' },
+          h('span', null, h('kbd', null, 'Enter'), ' ', t('reply.add')), ' · ',
+          h('span', null, h('kbd', null, 'Shift+Enter'), ' ', t('reply.newline')), ' · ',
+          h('button', {
+            type: 'button',
+            className: 'qrp-close',
+            'aria-label': t('reply.cancel'),
+            onClick: () => model.close(origin),
+          }, h('kbd', null, 'Esc'), ' ', t('reply.cancel')),
         ),
       )
     }
@@ -521,7 +540,7 @@ window.__ModuleLoader__.load({
       'quote.return': '返回回复',
       'quote.full': '查看引用原文',
       'reply.placeholder': '写下你的回复…',
-      'reply.add': '添加到聊天框',
+      'reply.add': '加入草稿',
       'reply.cancel': '取消',
       'reply.newline': '换行',
       'draft.remove': '删除这条引用回复',
@@ -535,7 +554,7 @@ window.__ModuleLoader__.load({
       'quote.return': 'Back to reply',
       'quote.full': 'View full quote',
       'reply.placeholder': 'Write your reply…',
-      'reply.add': 'Add to chat box',
+      'reply.add': 'Add to draft',
       'reply.cancel': 'Cancel',
       'reply.newline': 'New line',
       'draft.remove': 'Remove this quote reply',
@@ -582,31 +601,29 @@ window.__ModuleLoader__.load({
   background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 22%, transparent);
 }
 .qrp-card {
+  --qrp-accent: var(--dsw-alias-state-business-primary);
   position: fixed;
   z-index: 900;
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  width: min(424px, calc(100vw - 24px));
+  gap: 8px;
+  width: min(400px, calc(100vw - 24px));
   max-height: calc(100dvh - 24px);
   overflow: auto;
-  padding: 12px;
+  padding: 12px 14px 10px;
   border-radius: var(--dsw-radius-panel);
   background: var(--dsw-specific-input-major);
   box-shadow: var(--dsw-elevation-prominent);
   font: var(--dsw-font-s-14);
 }
-.qrp-card-head, .qrp-card-foot, .qrp-actions, .qrp-picking {
+.qrp-picking {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.qrp-card-head strong { font-size: 14px; }
-.qrp-card-foot { justify-content: space-between; flex-wrap: wrap; }
-.qrp-actions, .qrp-pick { margin-inline-start: auto; }
 .qrp-previews {
   display: grid;
-  flex: none;
+  min-width: 0;
   gap: 6px;
   max-height: min(208px, 34dvh);
   overflow: auto;
@@ -615,11 +632,10 @@ window.__ModuleLoader__.load({
   display: block;
   width: 100%;
   min-width: 0;
-  padding: 7px 9px;
+  padding: 2px 10px;
   border: 0;
-  border-inline-start: 3px solid var(--dsw-alias-state-business-primary);
-  border-radius: var(--dsw-radius-sm);
-  background: var(--dsw-alias-settings-card-fill);
+  border-inline-start: 2px solid color-mix(in srgb, var(--qrp-accent) 70%, transparent);
+  background: transparent;
   color: var(--dsw-alias-label-secondary);
   font: var(--dsw-font-xs-13);
   line-height: 18px;
@@ -637,25 +653,32 @@ window.__ModuleLoader__.load({
   overflow: hidden;
 }
 .qrp-preview-full { display: block; }
+.qrp-reply-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--dsw-alias-border-l2);
+}
+.qrp-reply-row:focus-within {
+  border-top-color: color-mix(in srgb, var(--qrp-accent) 35%, var(--dsw-alias-border-l2));
+}
 .qrp-input {
   box-sizing: border-box;
-  flex: none;
-  width: 100%;
-  min-height: 64px;
+  flex: 1;
+  min-width: 0;
+  min-height: 30px;
   max-height: 128px;
   field-sizing: content;
   resize: none;
-  padding: 8px 9px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: var(--dsw-radius-md);
+  padding: 4px 0;
+  border: 0;
+  outline: none;
   background: transparent;
   color: inherit;
   font: inherit;
   line-height: 20px;
-}
-.qrp-input:focus {
-  border-color: var(--dsw-alias-state-business-primary);
-  outline: 1px solid var(--dsw-alias-state-business-primary);
+  caret-color: var(--qrp-accent);
 }
 .qrp-input::placeholder, .qrp-key-hint { color: var(--dsw-alias-label-secondary); }
 .qrp-text-button, .qrp-remove, .qrp-add {
@@ -671,22 +694,41 @@ window.__ModuleLoader__.load({
   cursor: pointer;
 }
 .qrp-text-button { min-height: 28px; padding: 4px 7px; background: transparent; }
-.qrp-pick { color: var(--dsw-alias-state-business-primary); }
-.qrp-add {
-  min-height: 31px;
-  padding: 5px 10px;
-  background: var(--dsw-alias-button-primary-fill);
-  color: var(--dsw-alias-label-primary-inverted);
+.qrp-pick {
+  align-self: flex-start;
+  padding-inline: 0 6px;
+  color: var(--qrp-accent);
 }
-.qrp-add:hover:not(:disabled) { background: var(--dsw-alias-button-primary-hover); }
-.qrp-add:disabled { opacity: .45; cursor: default; }
-.qrp-key-hint, .qrp-notice { font-size: 12px; }
-.qrp-key-hint kbd {
-  padding: 1px 3px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 4px;
+.qrp-close {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
   font: inherit;
+  cursor: pointer;
 }
+.qrp-close:hover { text-decoration: underline; }
+.qrp-add {
+  flex: none;
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--qrp-accent);
+  color: white;
+  font: 600 18px/1 system-ui, sans-serif;
+}
+.qrp-add:hover:not(:disabled) { filter: brightness(1.1); }
+.qrp-add:disabled {
+  background: color-mix(in srgb, var(--qrp-accent) 14%, transparent);
+  color: var(--dsw-alias-label-secondary);
+  cursor: default;
+}
+.qrp-key-hint, .qrp-notice { font-size: 12px; }
+.qrp-key-hint span, .qrp-close { white-space: nowrap; }
+.qrp-key-hint kbd { font: inherit; white-space: nowrap; }
 .qrp-notice { color: var(--dsw-alias-state-warn-primary); }
 [data-composer-overlay]:has(.qrp-composer-extras:not([hidden])) {
   position: relative;
@@ -742,7 +784,7 @@ window.__ModuleLoader__.load({
 }
 @media (pointer: coarse) {
   .qrp-pill, .qrp-card button, .qrp-composer-extras button { min-height: 44px; }
-  .qrp-remove { min-width: 44px; }
+  .qrp-add, .qrp-remove { min-width: 44px; }
   .qrp-input { font-size: 16px; }
 }
 `

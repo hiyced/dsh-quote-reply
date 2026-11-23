@@ -1,0 +1,59 @@
+# Quote & Reply for DeepSeek Harness
+
+[简体中文](README.md)
+
+**Select text and reply right beside it.** Quote several passages in one reply, then add it to your chat draft as a removable chip.
+
+![Demo: select text, write a reply in the popover, add another passage, and turn it into a draft chip](docs/images/quote-reply-demo.gif)
+
+## Features
+
+- **Reply in place.** Open a popover from the text selection. The preview shows up to three lines. Hover or click to see the full quote.
+- **Answer several passages together.** Click **+ Select another**, highlight another passage, and click **Add quote**. Your reply stays in the popover.
+- **Keep drafts readable.** Each quote reply appears as one inline chip. Hover to read it in full or click `×` to remove that reply.
+- **Send from the composer.** At send time, the quoted text becomes standard Markdown blockquotes, with a blank line before the reply. The UI follows the Harness language setting and supports English and Simplified Chinese.
+
+![Two removable inline quote reply chips in the composer](docs/images/composer-bubbles.png)
+
+## Install
+
+Requires DeepSeek Harness `0.2.2-rc.5` or a compatible newer `0.2.x` version. Verified in the `0.2.2-rc.5` Web UI.
+
+In DSH NEXT, open **Plugins → Plugin Market** and search for `dsh-quote-reply`. Choose the entry by **`hiyced`** under **Sessions & Messages**.
+
+<details>
+<summary>Install from a local clone</summary>
+
+```sh
+git clone https://github.com/hiyced/dsh-quote-reply.git
+cd dsh-quote-reply
+```
+
+For desktop, launch Harness once to initialize it, then quit the app. Run the command from the repository directory and reopen the app.
+
+```sh
+dsh plugin --profile desktop add "link:$PWD"
+```
+
+On macOS, you can also use the CLI bundled with the app.
+
+```sh
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add "link:$PWD"
+```
+
+For Web, run the following commands and open the address printed in the terminal.
+
+```sh
+dsh plugin --profile web add "link:$PWD"
+dsh web
+```
+
+</details>
+
+## Usage
+
+1. Select text in a conversation and click **Quote reply** beside the selection.
+2. Write your reply. Press `Enter` or click the blue up arrow to add it to your draft.
+3. Add more replies as needed. When you're ready, use the composer's send button to send them together.
+
+In the popover, press `Shift+Enter` for a new line. Press `Esc`, click **Esc Cancel**, or click outside the popover to close it. **Add to draft** is disabled while the reply is empty.
