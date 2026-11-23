@@ -10,7 +10,6 @@ window.__ModuleLoader__.load({
     const pluginId = 'quote-reply'
     const namespace = 'quoteReply'
     const draftSource = 'quote-reply'
-    const draftChipSelector = '[data-composer-chip="' + draftSource + '"]'
     const draftCodec = {
       trigger: '@',
       name: draftSource,
@@ -47,17 +46,10 @@ window.__ModuleLoader__.load({
       id: 'quote',
       order: -10,
       match(text, from) {
-        for (const range of messageQuoteRanges(text)) {
-          for (const start of [range.start - 2, range.start, range.end]) {
-            if (start < from) continue
-            if (start === range.start) {
-              return { id: 'quote', start, end: range.end, data: { text: quoteTextOf(text.slice(start, range.end)) } }
-            }
-            if (text.slice(start, start + 2) === '\n\n') {
-              return { id: 'text', start, end: start + 2, data: { text: '\n\n', display: ' ' } }
-            }
-          }
-        }
+        const range = messageQuoteRanges(text).find(({ start }) => start >= from)
+        if (!range) return
+        const { start, end } = range
+        return { id: 'quote', start, end, data: { text: quoteTextOf(text.slice(start, end)) } }
       },
     }
 
@@ -313,7 +305,7 @@ window.__ModuleLoader__.load({
           const viewportHeight = view.document.documentElement.clientHeight
           const leftEdge = Math.max(margin, area.left + margin)
           const rightEdge = Math.min(viewportWidth - margin, area.right - margin)
-          card.style.width = Math.min(424, Math.max(0, rightEdge - leftEdge)) + 'px'
+          card.style.maxWidth = Math.max(0, rightEdge - leftEdge) + 'px'
           const width = card.offsetWidth
           const height = card.offsetHeight
           const below = last.bottom + 8
@@ -349,12 +341,19 @@ window.__ModuleLoader__.load({
       const input = useRef(null)
       const card = useRef(null)
       const composing = useRef(false)
+      const replySelection = useRef(null)
       const { origin, quotes, picking } = panel
 
       usePanelPosition(card, panel)
       useLayoutEffect(() => {
-        if (!picking) input.current?.focus({ preventScroll: true })
-      }, [panel, picking])
+        const textarea = input.current
+        if (!textarea) return
+        textarea.focus({ preventScroll: true })
+        if (replySelection.current) {
+          textarea.setSelectionRange(...replySelection.current)
+          replySelection.current = null
+        }
+      }, [panel])
 
       useEffect(() => {
         const document = origin.ownerDocument
@@ -398,65 +397,59 @@ window.__ModuleLoader__.load({
 
       if (picking) return null
       return h('section', { ref: card, className: 'qrp-card', role: 'dialog', 'aria-label': t('quote.reply') },
-        h('header', { className: 'qrp-card-head' },
-          h(QuoteGlyph), h('strong', null, t('quote.reply')),
-          h('button', { type: 'button', className: 'qrp-text-button qrp-pick', onClick: () => model.chooseMore(true) },
-            h('span', { 'aria-hidden': true }, '+'), ' ', t('quote.more')),
-        ),
         h('div', { className: 'qrp-previews' },
           quotes.map((quote, index) => h(QuotePreview, { key: index, text: quote.text, t })),
         ),
-        h('textarea', {
-          ref: input,
-          className: 'qrp-input',
-          rows: 2,
-          'aria-label': t('reply.placeholder'),
-          placeholder: t('reply.placeholder'),
-          value: reply,
-          onChange: event => { setReply(event.currentTarget.value); setNotice(false) },
-          onCompositionStart: () => { composing.current = true },
-          onCompositionEnd: () => { composing.current = false },
-          onKeyDown(event) {
-            if (event.key !== 'Enter') return
-            event.stopPropagation()
-            if (event.shiftKey || composing.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
-            event.preventDefault()
-            addToDraft()
+        h('button', {
+          type: 'button',
+          className: 'qrp-text-button qrp-pick',
+          onClick() {
+            const { selectionStart, selectionEnd, selectionDirection } = input.current
+            replySelection.current = [selectionStart, selectionEnd, selectionDirection]
+            model.chooseMore(true)
           },
-        }),
+        }, h('span', { 'aria-hidden': true }, '+'), t('quote.more')),
+        h('div', { className: 'qrp-reply-row' },
+          h('textarea', {
+            ref: input,
+            className: 'qrp-input',
+            rows: 1,
+            'aria-label': t('reply.placeholder'),
+            placeholder: t('reply.placeholder'),
+            value: reply,
+            onChange: event => { setReply(event.currentTarget.value); setNotice(false) },
+            onCompositionStart: () => { composing.current = true },
+            onCompositionEnd: () => { composing.current = false },
+            onKeyDown(event) {
+              if (event.key !== 'Enter') return
+              event.stopPropagation()
+              if (event.shiftKey || composing.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
+              event.preventDefault()
+              addToDraft()
+            },
+          }),
+          h('button', {
+            type: 'button',
+            className: 'qrp-add',
+            'aria-label': t('reply.add'),
+            'aria-keyshortcuts': 'Enter',
+            title: t('reply.add'),
+            disabled: !reply.trim(),
+            onClick: addToDraft,
+          }, h('span', { 'aria-hidden': true }, '↑')),
+        ),
         notice && h('div', { className: 'qrp-notice', role: 'alert' }, t('draft.unavailable')),
-        h('footer', { className: 'qrp-card-foot' },
-          h('span', { className: 'qrp-key-hint' }, h('kbd', null, 'Shift'), ' ', h('kbd', null, 'Enter'), ' ', t('reply.newline')),
-          h('div', { className: 'qrp-actions' },
-            h('button', { type: 'button', className: 'qrp-text-button', onClick: () => model.close(origin) }, t('reply.cancel')),
-            h('button', {
-              type: 'button',
-              className: 'qrp-add',
-              'aria-keyshortcuts': 'Enter',
-              disabled: !reply.trim(),
-              onClick: addToDraft,
-            }, t('reply.add'), h('span', { 'aria-hidden': true }, '↵')),
-          ),
+        h('footer', { className: 'qrp-key-hint' },
+          h('span', null, h('kbd', null, 'Enter'), ' ', t('reply.add')), ' · ',
+          h('span', null, h('kbd', null, 'Shift+Enter'), ' ', t('reply.newline')), ' · ',
+          h('button', {
+            type: 'button',
+            className: 'qrp-close',
+            'aria-label': t('reply.cancel'),
+            onClick: () => model.close(origin),
+          }, h('kbd', null, 'Esc'), ' ', t('reply.cancel')),
         ),
       )
-    }
-
-    function useDraftChipHosts(seat, replies) {
-      const [hosts, setHosts] = useState([])
-      useLayoutEffect(() => {
-        const editor = seat.current?.closest('[data-composer-card]')?.querySelector('[data-composer-input]')
-        if (!editor) return
-        function reconcile() {
-          const elements = [...editor.querySelectorAll(draftChipSelector)]
-          setHosts(previous => elements.length === previous.length
-            && elements.every((element, index) => element === previous[index]) ? previous : elements)
-        }
-        reconcile()
-        const observer = new MutationObserver(reconcile)
-        observer.observe(editor, { childList: true, subtree: true })
-        return () => observer.disconnect()
-      }, [seat, replies])
-      return hosts.length === replies.length ? hosts : []
     }
 
     function ComposerQuoteReplies({ model, inputActions, t }) {
@@ -465,8 +458,8 @@ window.__ModuleLoader__.load({
       const [notice, setNotice] = useState(false)
       const seat = useRef(null)
       const resume = useRef(null)
-      const hosts = useDraftChipHosts(seat, state.replies)
       const panel = state.panel?.origin === origin ? state.panel : null
+      const hasReplies = state.replies.length > 0
 
       useLayoutEffect(() => {
         const owner = seat.current?.closest(conversationSelector) ?? null
@@ -479,7 +472,25 @@ window.__ModuleLoader__.load({
       }, [panel?.picking])
 
       return h(Fragment, null,
-        h('div', { ref: seat, className: 'qrp-composer-extras', hidden: !panel?.picking && !notice },
+        h('div', { ref: seat, className: 'qrp-composer-extras', hidden: !hasReplies && !panel?.picking && !notice },
+          hasReplies && h('div', { className: 'qrp-draft-replies', role: 'group', 'aria-label': t('draft.replies') },
+            state.replies.map(reply => {
+              const original = quoteTextOf(reply.clipboardText.trimStart().split('\n')[0])
+              return h('span', { key: reply.occurrenceId, className: 'qrp-draft-chip', title: reply.clipboardText.trim() },
+                h(QuoteGlyph),
+                h('span', { className: 'qrp-ellipsis qrp-draft-origin' }, original),
+                h('span', { className: 'qrp-ellipsis qrp-draft-response' }, reply.label),
+                h('button', {
+                  type: 'button',
+                  className: 'qrp-remove',
+                  'aria-label': t('draft.remove') + ': ' + reply.label,
+                  disabled: !state.editable,
+                  onMouseDown: event => event.preventDefault(),
+                  onClick() { setNotice(!model.remove(inputActions, reply.occurrenceId)) },
+                }, h('span', { 'aria-hidden': true }, '×')),
+              )
+            }),
+          ),
           panel?.picking && h('div', { className: 'qrp-picking', 'data-qrp-picking': '' },
             h('span', { role: 'status' }, t('quote.pick')),
             h('button', {
@@ -489,26 +500,6 @@ window.__ModuleLoader__.load({
           ),
           notice && h('span', { className: 'qrp-notice', role: 'alert' }, t('draft.unavailable')),
         ),
-        hosts.map((host, index) => {
-          const reply = state.replies[index]
-          const original = quoteTextOf(reply.clipboardText.trimStart().split('\n')[0])
-          return createPortal(h('span', { className: 'qrp-draft-chip', title: reply.clipboardText.trim() },
-            h(QuoteGlyph),
-            h('span', { className: 'qrp-ellipsis qrp-draft-origin' }, original),
-            h('span', { className: 'qrp-ellipsis qrp-draft-response' }, reply.label),
-            h('button', {
-              type: 'button',
-              className: 'qrp-remove',
-              'aria-label': t('draft.remove') + ': ' + reply.label,
-              disabled: !state.editable,
-              onMouseDown: event => event.preventDefault(),
-              onClick(event) {
-                event.stopPropagation()
-                setNotice(!model.remove(inputActions, reply.occurrenceId))
-              },
-            }, h('span', { 'aria-hidden': true }, '×')),
-          ), host, reply.occurrenceId)
-        }),
         panel && createPortal(h(QuoteReplyPanel, { model, panel, t }), origin.ownerDocument.body),
       )
     }
@@ -521,9 +512,10 @@ window.__ModuleLoader__.load({
       'quote.return': '返回回复',
       'quote.full': '查看引用原文',
       'reply.placeholder': '写下你的回复…',
-      'reply.add': '添加到聊天框',
+      'reply.add': '加入草稿',
       'reply.cancel': '取消',
       'reply.newline': '换行',
+      'draft.replies': '引用回复草稿',
       'draft.remove': '删除这条引用回复',
       'draft.unavailable': '聊天框暂时无法编辑，请稍后再试。',
     }
@@ -535,9 +527,10 @@ window.__ModuleLoader__.load({
       'quote.return': 'Back to reply',
       'quote.full': 'View full quote',
       'reply.placeholder': 'Write your reply…',
-      'reply.add': 'Add to chat box',
+      'reply.add': 'Add to draft',
       'reply.cancel': 'Cancel',
       'reply.newline': 'New line',
+      'draft.replies': 'Quote replies in draft',
       'draft.remove': 'Remove this quote reply',
       'draft.unavailable': 'The chat box is temporarily unavailable. Try again shortly.',
     }
@@ -582,31 +575,29 @@ window.__ModuleLoader__.load({
   background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 22%, transparent);
 }
 .qrp-card {
+  --qrp-accent: var(--dsw-alias-state-business-primary);
   position: fixed;
   z-index: 900;
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  width: min(424px, calc(100vw - 24px));
+  gap: 8px;
+  width: min(400px, calc(100vw - 24px));
   max-height: calc(100dvh - 24px);
   overflow: auto;
-  padding: 12px;
+  padding: 12px 14px 10px;
   border-radius: var(--dsw-radius-panel);
   background: var(--dsw-specific-input-major);
   box-shadow: var(--dsw-elevation-prominent);
   font: var(--dsw-font-s-14);
 }
-.qrp-card-head, .qrp-card-foot, .qrp-actions, .qrp-picking {
+.qrp-picking {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.qrp-card-head strong { font-size: 14px; }
-.qrp-card-foot { justify-content: space-between; flex-wrap: wrap; }
-.qrp-actions, .qrp-pick { margin-inline-start: auto; }
 .qrp-previews {
   display: grid;
-  flex: none;
+  min-width: 0;
   gap: 6px;
   max-height: min(208px, 34dvh);
   overflow: auto;
@@ -615,11 +606,10 @@ window.__ModuleLoader__.load({
   display: block;
   width: 100%;
   min-width: 0;
-  padding: 7px 9px;
+  padding: 2px 10px;
   border: 0;
-  border-inline-start: 3px solid var(--dsw-alias-state-business-primary);
-  border-radius: var(--dsw-radius-sm);
-  background: var(--dsw-alias-settings-card-fill);
+  border-inline-start: 2px solid color-mix(in srgb, var(--qrp-accent) 70%, transparent);
+  background: transparent;
   color: var(--dsw-alias-label-secondary);
   font: var(--dsw-font-xs-13);
   line-height: 18px;
@@ -637,25 +627,32 @@ window.__ModuleLoader__.load({
   overflow: hidden;
 }
 .qrp-preview-full { display: block; }
+.qrp-reply-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--dsw-alias-border-l2);
+}
+.qrp-reply-row:focus-within {
+  border-top-color: color-mix(in srgb, var(--qrp-accent) 35%, var(--dsw-alias-border-l2));
+}
 .qrp-input {
   box-sizing: border-box;
-  flex: none;
-  width: 100%;
-  min-height: 64px;
+  flex: 1;
+  min-width: 0;
+  min-height: 30px;
   max-height: 128px;
   field-sizing: content;
   resize: none;
-  padding: 8px 9px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: var(--dsw-radius-md);
+  padding: 4px 0;
+  border: 0;
+  outline: none;
   background: transparent;
   color: inherit;
   font: inherit;
   line-height: 20px;
-}
-.qrp-input:focus {
-  border-color: var(--dsw-alias-state-business-primary);
-  outline: 1px solid var(--dsw-alias-state-business-primary);
+  caret-color: var(--qrp-accent);
 }
 .qrp-input::placeholder, .qrp-key-hint { color: var(--dsw-alias-label-secondary); }
 .qrp-text-button, .qrp-remove, .qrp-add {
@@ -671,31 +668,60 @@ window.__ModuleLoader__.load({
   cursor: pointer;
 }
 .qrp-text-button { min-height: 28px; padding: 4px 7px; background: transparent; }
-.qrp-pick { color: var(--dsw-alias-state-business-primary); }
-.qrp-add {
-  min-height: 31px;
-  padding: 5px 10px;
-  background: var(--dsw-alias-button-primary-fill);
-  color: var(--dsw-alias-label-primary-inverted);
+.qrp-pick {
+  align-self: flex-start;
+  padding-inline: 0 6px;
+  color: var(--qrp-accent);
 }
-.qrp-add:hover:not(:disabled) { background: var(--dsw-alias-button-primary-hover); }
-.qrp-add:disabled { opacity: .45; cursor: default; }
-.qrp-key-hint, .qrp-notice { font-size: 12px; }
-.qrp-key-hint kbd {
-  padding: 1px 3px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 4px;
+.qrp-close {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
   font: inherit;
+  cursor: pointer;
 }
+.qrp-close:hover { text-decoration: underline; }
+.qrp-add {
+  flex: none;
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--qrp-accent);
+  color: white;
+  font: 600 18px/1 system-ui, sans-serif;
+}
+.qrp-add:hover:not(:disabled) { filter: brightness(1.1); }
+.qrp-add:disabled {
+  background: color-mix(in srgb, var(--qrp-accent) 14%, transparent);
+  color: var(--dsw-alias-label-secondary);
+  cursor: default;
+}
+.qrp-key-hint, .qrp-notice { font-size: 12px; }
+.qrp-key-hint span, .qrp-close { white-space: nowrap; }
+.qrp-key-hint kbd { font: inherit; white-space: nowrap; }
 .qrp-notice { color: var(--dsw-alias-state-warn-primary); }
 [data-composer-overlay]:has(.qrp-composer-extras:not([hidden])) {
   position: relative;
   height: auto;
 }
-.qrp-composer-extras { padding: 8px 10px 0; }
+.qrp-composer-extras { display: grid; gap: 6px; padding-inline: 10px; }
 .qrp-composer-extras[hidden] { display: none; }
-/* The composer mounts its stock decorator into the same atomic node. */
-[data-composer-chip="quote-reply"]:has(> .qrp-draft-chip) > :not(.qrp-draft-chip) { display: none; }
+[data-composer-card]:has(.qrp-draft-replies) [data-composer-input] [data-composer-chip="quote-reply"] {
+  display: none;
+}
+.qrp-draft-replies {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  max-height: min(112px, 27dvh);
+  overflow: auto;
+  padding: 4px;
+}
 .qrp-draft-chip, .qrp-picking {
   align-items: center;
   gap: 5px;
@@ -711,11 +737,10 @@ window.__ModuleLoader__.load({
   display: inline-flex;
   box-sizing: border-box;
   max-width: min(100%, 360px);
-  vertical-align: middle;
 }
 .qrp-draft-origin { max-width: 180px; color: var(--dsw-alias-label-secondary); }
 .qrp-draft-response { padding-inline-start: 5px; border-inline-start: 1px solid var(--dsw-alias-border-l2); }
-.qrp-picking { justify-content: space-between; margin-bottom: 5px; }
+.qrp-picking { justify-content: space-between; }
 .qrp-remove {
   flex: none;
   width: 22px;
@@ -742,7 +767,7 @@ window.__ModuleLoader__.load({
 }
 @media (pointer: coarse) {
   .qrp-pill, .qrp-card button, .qrp-composer-extras button { min-height: 44px; }
-  .qrp-remove { min-width: 44px; }
+  .qrp-add, .qrp-remove { min-width: 44px; }
   .qrp-input { font-size: 16px; }
 }
 `
