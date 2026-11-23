@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Quote & reply bubble",
-    "description": "Reply to selected chat text in a bubble. Quote multiple passages and remove individual replies from the chat draft.",
-    "detail": "docs/DETAIL.md"
+    "description": "Reply beside selected chat text, combine multiple passages in one reply, and keep removable reply bubbles above the draft text. Quotes are sent as Markdown blockquotes.",
+    "detail": "docs/DETAIL.en.md"
   }
 }
