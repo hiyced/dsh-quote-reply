@@ -10,7 +10,6 @@ window.__ModuleLoader__.load({
     const pluginId = 'quote-reply'
     const namespace = 'quoteReply'
     const draftSource = 'quote-reply'
-    const draftChipSelector = '[data-composer-chip="' + draftSource + '"]'
     const draftCodec = {
       trigger: '@',
       name: draftSource,
@@ -453,32 +452,14 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function useDraftChipHosts(seat, replies) {
-      const [hosts, setHosts] = useState([])
-      useLayoutEffect(() => {
-        const editor = seat.current?.closest('[data-composer-card]')?.querySelector('[data-composer-input]')
-        if (!editor) return
-        function reconcile() {
-          const elements = [...editor.querySelectorAll(draftChipSelector)]
-          setHosts(previous => elements.length === previous.length
-            && elements.every((element, index) => element === previous[index]) ? previous : elements)
-        }
-        reconcile()
-        const observer = new MutationObserver(reconcile)
-        observer.observe(editor, { childList: true, subtree: true })
-        return () => observer.disconnect()
-      }, [seat, replies])
-      return hosts.length === replies.length ? hosts : []
-    }
-
     function ComposerQuoteReplies({ model, inputActions, t }) {
       const state = useSyncExternalStore(model.subscribe, model.getSnapshot)
       const [origin, setOrigin] = useState(null)
       const [notice, setNotice] = useState(false)
       const seat = useRef(null)
       const resume = useRef(null)
-      const hosts = useDraftChipHosts(seat, state.replies)
       const panel = state.panel?.origin === origin ? state.panel : null
+      const hasReplies = state.replies.length > 0
 
       useLayoutEffect(() => {
         const owner = seat.current?.closest(conversationSelector) ?? null
@@ -491,7 +472,25 @@ window.__ModuleLoader__.load({
       }, [panel?.picking])
 
       return h(Fragment, null,
-        h('div', { ref: seat, className: 'qrp-composer-extras', hidden: !panel?.picking && !notice },
+        h('div', { ref: seat, className: 'qrp-composer-extras', hidden: !hasReplies && !panel?.picking && !notice },
+          hasReplies && h('div', { className: 'qrp-draft-replies', role: 'group', 'aria-label': t('draft.replies') },
+            state.replies.map(reply => {
+              const original = quoteTextOf(reply.clipboardText.trimStart().split('\n')[0])
+              return h('span', { key: reply.occurrenceId, className: 'qrp-draft-chip', title: reply.clipboardText.trim() },
+                h(QuoteGlyph),
+                h('span', { className: 'qrp-ellipsis qrp-draft-origin' }, original),
+                h('span', { className: 'qrp-ellipsis qrp-draft-response' }, reply.label),
+                h('button', {
+                  type: 'button',
+                  className: 'qrp-remove',
+                  'aria-label': t('draft.remove') + ': ' + reply.label,
+                  disabled: !state.editable,
+                  onMouseDown: event => event.preventDefault(),
+                  onClick() { setNotice(!model.remove(inputActions, reply.occurrenceId)) },
+                }, h('span', { 'aria-hidden': true }, '×')),
+              )
+            }),
+          ),
           panel?.picking && h('div', { className: 'qrp-picking', 'data-qrp-picking': '' },
             h('span', { role: 'status' }, t('quote.pick')),
             h('button', {
@@ -501,26 +500,6 @@ window.__ModuleLoader__.load({
           ),
           notice && h('span', { className: 'qrp-notice', role: 'alert' }, t('draft.unavailable')),
         ),
-        hosts.map((host, index) => {
-          const reply = state.replies[index]
-          const original = quoteTextOf(reply.clipboardText.trimStart().split('\n')[0])
-          return createPortal(h('span', { className: 'qrp-draft-chip', title: reply.clipboardText.trim() },
-            h(QuoteGlyph),
-            h('span', { className: 'qrp-ellipsis qrp-draft-origin' }, original),
-            h('span', { className: 'qrp-ellipsis qrp-draft-response' }, reply.label),
-            h('button', {
-              type: 'button',
-              className: 'qrp-remove',
-              'aria-label': t('draft.remove') + ': ' + reply.label,
-              disabled: !state.editable,
-              onMouseDown: event => event.preventDefault(),
-              onClick(event) {
-                event.stopPropagation()
-                setNotice(!model.remove(inputActions, reply.occurrenceId))
-              },
-            }, h('span', { 'aria-hidden': true }, '×')),
-          ), host, reply.occurrenceId)
-        }),
         panel && createPortal(h(QuoteReplyPanel, { model, panel, t }), origin.ownerDocument.body),
       )
     }
@@ -536,6 +515,7 @@ window.__ModuleLoader__.load({
       'reply.add': '加入草稿',
       'reply.cancel': '取消',
       'reply.newline': '换行',
+      'draft.replies': '引用回复草稿',
       'draft.remove': '删除这条引用回复',
       'draft.unavailable': '聊天框暂时无法编辑，请稍后再试。',
     }
@@ -550,6 +530,7 @@ window.__ModuleLoader__.load({
       'reply.add': 'Add to draft',
       'reply.cancel': 'Cancel',
       'reply.newline': 'New line',
+      'draft.replies': 'Quote replies in draft',
       'draft.remove': 'Remove this quote reply',
       'draft.unavailable': 'The chat box is temporarily unavailable. Try again shortly.',
     }
@@ -727,10 +708,20 @@ window.__ModuleLoader__.load({
   position: relative;
   height: auto;
 }
-.qrp-composer-extras { padding: 8px 10px 0; }
+.qrp-composer-extras { display: grid; gap: 6px; padding-inline: 10px; }
 .qrp-composer-extras[hidden] { display: none; }
-/* The composer mounts its stock decorator into the same atomic node. */
-[data-composer-chip="quote-reply"]:has(> .qrp-draft-chip) > :not(.qrp-draft-chip) { display: none; }
+[data-composer-card]:has(.qrp-draft-replies) [data-composer-input] [data-composer-chip="quote-reply"] {
+  display: none;
+}
+.qrp-draft-replies {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  max-height: min(112px, 27dvh);
+  overflow: auto;
+  padding: 4px;
+}
 .qrp-draft-chip, .qrp-picking {
   align-items: center;
   gap: 5px;
@@ -746,15 +737,10 @@ window.__ModuleLoader__.load({
   display: inline-flex;
   box-sizing: border-box;
   max-width: min(100%, 360px);
-  margin-block: 2px;
-  vertical-align: middle;
-}
-[data-composer-chip="quote-reply"] + [data-composer-chip="quote-reply"] > .qrp-draft-chip {
-  margin-inline-start: 4px;
 }
 .qrp-draft-origin { max-width: 180px; color: var(--dsw-alias-label-secondary); }
 .qrp-draft-response { padding-inline-start: 5px; border-inline-start: 1px solid var(--dsw-alias-border-l2); }
-.qrp-picking { justify-content: space-between; margin-bottom: 5px; }
+.qrp-picking { justify-content: space-between; }
 .qrp-remove {
   flex: none;
   width: 22px;

@@ -2,7 +2,7 @@
 
 [简体中文](README.md)
 
-**Select text and reply right beside it.** Add several quote replies to your chat draft, each as its own removable chip.
+**Select text and reply right beside it.** Each quote reply appears as a removable chip at the top of the composer.
 
 ![Demo: write two separate quote replies, add them to the draft, and remove one chip](docs/images/quote-reply-demo.gif)
 
@@ -10,10 +10,10 @@
 
 - **Reply in place.** Open a popover from the text selection. The preview shows up to three lines. Hover or click to see the full quote.
 - **Answer several passages together.** Click **+ Select another**, highlight another passage, and click **Add quote**. Your reply stays in the popover.
-- **Keep drafts readable.** Each quote reply appears as one inline chip. Hover to read it in full or click `×` to remove that reply.
+- **Keep quote replies in view.** Chips stay above the draft text as you type or scroll, in the order you added them. Hover to read a reply in full or click `×` to remove it.
 - **Send from the composer.** At send time, the quoted text becomes standard Markdown blockquotes, with a blank line before the reply. The UI follows the Harness language setting and supports English and Simplified Chinese.
 
-![Two removable inline quote reply chips in the composer](docs/images/composer-bubbles.png)
+![Two removable quote reply chips at the top of the composer](docs/images/composer-bubbles.png)
 
 ## Install
 
@@ -54,6 +54,6 @@ dsh web
 
 1. Select text in a conversation and click **Quote reply** beside the selection.
 2. Write your reply. Press `Enter` or click the blue up arrow to add it to your draft.
-3. To write a separate reply, select the next passage and click **Quote reply** to open a fresh popover. Each reply has its own chip, and you can send them together from the composer.
+3. To write a separate reply, select the next passage and click **Quote reply** to open a fresh popover. The two chips are shown in order at the top of the composer and can be sent together.
 
 In the popover, press `Shift+Enter` for a new line. Press `Esc`, click **Esc Cancel**, or click outside the popover to close it. **Add to draft** is disabled while the reply is empty.
