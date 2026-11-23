@@ -1,47 +1,51 @@
-# 引用气泡回复
+# Quote & Reply for DeepSeek Harness
 
-[English](README.en.md)
+[![GitHub Release](https://img.shields.io/github/v/release/hiyced/dsh-quote-reply?logo=github)](https://github.com/hiyced/dsh-quote-reply/releases/latest)
+[![DSH NEXT Plugin Market](https://img.shields.io/badge/DSH%20NEXT-listed-2563eb)](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/data/plugins/hiyced__dsh-quote-reply.yml)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-给 DeepSeek Harness 用的引用回复插件。**划选文字，在选区旁写回复。** 每条引用回复会成为一个可删除的气泡，固定显示在聊天框顶部。
+[简体中文](README.zh.md)
 
-![操作演示：分别写两条引用回复，加入草稿后单独删除其中一条](docs/images/quote-reply-demo.gif)
+**Select text and reply right beside it.** Each quote reply appears as a removable chip at the top of the composer.
 
-## 功能
+![Demo: write two separate quote replies, add them to the draft, and remove one chip](docs/images/quote-reply-demo.gif)
 
-- **就地回复。** 划选后点「引用回复」，在选区旁写。原文最多预览三行，悬停或点击可以看全文。
-- **一起回答多段原文。** 点「＋ 再选一段」，选中另一段后点「加入引用」。已写的回复会保留。
-- **气泡固定在顶部。** 气泡按添加顺序排列，普通草稿在下面，滚动草稿时也能看到气泡。悬停可看全文，点 `×` 可删除这一条。
-- **照常发送。** 用聊天框的发送按钮提交，原文会展开成标准 Markdown 引用，与回复之间留一行空白。界面跟随 Harness 的中英文设置。
+## Features
 
-![聊天框顶部的两条可删除的引用回复](docs/images/composer-bubbles.png)
+- **Reply in place.** Open a popover from the text selection. The preview shows up to three lines. Hover or click to see the full quote.
+- **Answer several passages together.** Click **+ Select another**, highlight another passage, and click **Add quote**. Your reply stays in the popover.
+- **Keep quote replies in view.** Chips stay above the draft text as you type or scroll, in the order you added them. Hover to read a reply in full or click `×` to remove it.
+- **Send from the composer.** At send time, the quoted text becomes standard Markdown blockquotes, with a blank line before the reply. The UI follows the Harness language setting and supports English and Simplified Chinese.
 
-## 安装
+![Two removable quote reply chips at the top of the composer](docs/images/composer-bubbles.png)
 
-需要 DeepSeek Harness `0.2.2-rc.5` 或兼容的更新 `0.2.x` 版本。已在 `0.2.2-rc.5` 的 Web 界面验证。
+## Install
 
-在 DSH NEXT 打开「插件 → 插件市场」，搜索 `dsh-quote-reply`，选择「会话与消息」里 GitHub 作者为 **`hiyced`** 的条目。
+Requires DeepSeek Harness `0.2.2-rc.5` or a compatible newer `0.2.x` version. Verified in the `0.2.2-rc.5` Web UI.
+
+In DSH NEXT, open **Plugins → Plugin Market** and search for `dsh-quote-reply`. Choose the entry by **`hiyced`** under **Sessions & Messages**.
 
 <details>
-<summary>从本地仓库安装</summary>
+<summary>Install from a local clone</summary>
 
 ```sh
 git clone https://github.com/hiyced/dsh-quote-reply.git
 cd dsh-quote-reply
 ```
 
-桌面端先启动一次 Harness 完成初始化，再彻底退出。在仓库目录执行以下命令，然后重新打开应用。
+For desktop, launch Harness once to initialize it, then quit the app. Run the command from the repository directory and reopen the app.
 
 ```sh
 dsh plugin --profile desktop add "link:$PWD"
 ```
 
-macOS 上也可用应用自带的命令行。
+On macOS, you can also use the CLI bundled with the app.
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add "link:$PWD"
 ```
 
-Web 端执行以下命令，再打开终端显示的地址。
+For Web, run the following commands and open the address printed in the terminal.
 
 ```sh
 dsh plugin --profile web add "link:$PWD"
@@ -50,10 +54,10 @@ dsh web
 
 </details>
 
-## 用法
+## Usage
 
-1. 在会话消息里划选文字，点选区旁的「引用回复」。
-2. 写回复，按 `Enter` 或点蓝色上箭头，把内容加入聊天框草稿。
-3. 要单独回复下一段时，再划选那段原文，点「引用回复」打开新的回复框。两个气泡依次排在聊天框顶部，可以一起发送。
+1. Select text in a conversation and click **Quote reply** beside the selection.
+2. Write your reply. Press `Enter` or click the blue up arrow to add it to your draft.
+3. To write a separate reply, select the next passage and click **Quote reply** to open a fresh popover. The two chips are shown in order at the top of the composer and can be sent together.
 
-弹窗里用 `Shift+Enter` 换行，按 `Esc`、点「Esc 取消」或点击弹窗外可关闭。回复为空时，「加入草稿」不可用。
+In the popover, press `Shift+Enter` for a new line. Press `Esc`, click **Esc Cancel**, or click outside the popover to close it. **Add to draft** is disabled while the reply is empty.

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本目录是 DeepSeek Harness 的「引用气泡回复」插件。安装、使用和效果截图见 [README.md](README.md)。
+本目录是 DeepSeek Harness 的「引用气泡回复」插件。安装、使用和效果截图见 [中文 README](README.zh.md)。
 
 ## 代码入口
 
